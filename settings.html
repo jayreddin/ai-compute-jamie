@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- ...existing code... -->
+</head>
+<body>
+    <!-- ...existing code... -->
+    <div id="top-buttons">
+        <button id="settings-button">Settings</button>
+        <button id="mobile-control-button">Mobile Control</button>
+    </div>
+    <div id="input-command">
+        <!-- ...existing code... -->
+    </div>
+    <div id="settings-menu">
+        <!-- ...existing code... -->
+        <label for="screenshot-slider">Screenshots per command: <span id="screenshot-count">1</span></label>
+        <input type="range" id="screenshot-slider" min="1" max="10" value="1" oninput="updateScreenshotCount(this.value)">
+        <!-- ...existing code... -->
+    </div>
+    <div id="log-output">
+        <!-- ...existing code... -->
+    </div>
+    <div id="technical-output">
+        <!-- ...existing code... -->
+    </div>
+    <!-- ...existing code... -->
+    <script>
+        function updateScreenshotCount(value) {
+            document.getElementById('screenshot-count').innerText = value;
+        }
+        // ...existing code...
+    </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+/* ...existing code... */
+#top-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+#settings-button, #mobile-control-button {
+    /* Adjust button styles as needed */
+}
+#log-output {
+    height: 30%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse;
+}
+#technical-output {
+    height: 60%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse;
+}
+/* ...existing code... */

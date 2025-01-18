@@ -95,6 +95,13 @@ class MainWindow(ttk.Window):
             frame.columnconfigure(0, weight=1)
             frame.rowconfigure(7, weight=1)
 
+            # Settings and Mobile Control Buttons
+            settings_button = ttk.Button(self, text='Settings', bootstyle="info-outline", command=self._open_settings)
+            settings_button.grid(column=0, row=0, sticky=ttk.W, padx=(0, 5))
+
+            mobile_control_button = ttk.Button(self, text='Mobile Control', bootstyle="info-outline", command=self.toggle_web_server)
+            mobile_control_button.grid(column=1, row=0, sticky=ttk.W, padx=(0, 5))
+
             # Entry widget
             self.entry = ttk.Entry(frame, font=('Helvetica', 14))
             self.entry.grid(column=0, row=1, sticky=(ttk.W, ttk.E), columnspan=3, pady=(0, 5))
@@ -134,7 +141,7 @@ class MainWindow(ttk.Window):
             log_label = ttk.Label(frame, text='Log Output', font=('Helvetica', 12), bootstyle="secondary")
             log_label.grid(column=0, row=5, columnspan=3, sticky=ttk.W, pady=(0, 5))
 
-            self.message_display = ttk.ScrolledText(frame, wrap=ttk.WORD, font=('Helvetica', 10), height=8)
+            self.message_display = ttk.ScrolledText(frame, wrap=ttk.WORD, font=('Helvetica', 10), height=4)
             self.message_display.grid(column=0, row=6, columnspan=3, sticky=(ttk.W, ttk.E, ttk.N, ttk.S), pady=(0, 5))
 
             # Technical Output Frame
@@ -146,28 +153,16 @@ class MainWindow(ttk.Window):
             # Technical Output Text Box
             log_label = ttk.Label(self.technical_output_frame, text='Technical Output', font=('Helvetica', 12), bootstyle="secondary")
             log_label.grid(column=0, row=0, sticky=ttk.W, pady=(0, 5))
-            self.technical_output_display = ttk.ScrolledText(self.technical_output_frame, wrap=ttk.WORD, font=('Helvetica', 10), height=15)
+            self.technical_output_display = ttk.ScrolledText(self.technical_output_frame, wrap=ttk.WORD, font=('Helvetica', 10), height=10)
             self.technical_output_display.grid(column=0, row=1, sticky=(ttk.W, ttk.E, ttk.N, ttk.S))
 
             # Hide Technical Output Initially
             self.technical_output_frame.grid_remove()
 
-            # Mobile Control Button
-            self.mobile_control_button = ttk.Button(frame, text='Mobile Control', bootstyle="info-outline", command=self.toggle_web_server)
-            self.mobile_control_button.grid(column=0, row=9, columnspan=3, sticky=ttk.W, pady=(0, 5))
-            # View Technical Output Button
-            technical_output_button = ttk.Button(frame, text='View technical output', bootstyle="info",
-                                                 command=self.toggle_technical_output)
-            technical_output_button.grid(column=0, row=10, columnspan=3, sticky=ttk.W, pady=(0, 5))
-
             # Server Address
             self.server_address_label = ttk.Label(frame, text=f'http://{self.local_ip}:5000', font=('Helvetica', 8), bootstyle="secondary")
             self.server_address_label.grid(column=0, row=11, columnspan=3, sticky=ttk.W, pady=(0, 5))
             self.server_address_label.grid_remove()
-
-            # Settings Button
-            settings_button = ttk.Button(self, text='Settings', bootstyle="info-outline", command=self._open_settings)
-            settings_button.place(relx=1.0, rely=0.0, anchor='ne', x=-5, y=5)
 
         except Exception as e:
             logging.error(f'Error creating widgets: {e}')
@@ -306,7 +301,7 @@ class MainWindow(ttk.Window):
         def insert_message():
             if isinstance(message, str):
                 self.message_display.insert(0.0, message + '\n')
-            elif isinstance(message, tuple) and len(message) == 2 and isinstance(message[0], str) and isinstance(message[1], str):
+            elif isinstance(message, tuple) and len(message == 2) and isinstance(message[0], str) and isinstance(message[1], str):
                 try:
                     with Image.open(message[1]) as img_file:
                         img = ImageTk.PhotoImage(img_file)
