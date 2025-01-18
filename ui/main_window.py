@@ -15,7 +15,6 @@ from web_server import get_local_ip_address, start_web_server
 import qrcode
 import requests
 
-
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 

@@ -46,7 +46,7 @@ class UI:
                 self.base_url_entry.insert(0, settings_dict['base_url'])
             if 'model' in settings_dict:
                 self.model_entry.insert(0, settings_dict['model'])
-                self.model_var.set(settings_dict.get('model', 'custom'))
+                self.model_var.set(settings_dict.get('model', 'gpt-4o'))  # Set default model to gpt-4o
             else:
                 self.model_entry.insert(0, DEFAULT_MODEL_NAME)
                 self.model_var.set(DEFAULT_MODEL_NAME)
@@ -63,7 +63,6 @@ class UI:
             models = [
                 ('GPT-4o (Default. Medium-Accurate, Medium-Fast)', 'gpt-4o'),
                 ('GPT-4o-mini (Cheapest, Fastest)', 'gpt-4o-mini'),
-                ('GPT-4v (Deprecated. Most-Accurate, Slowest)', 'gpt-4-vision-preview'),
                 ('GPT-4-Turbo (Least Accurate, Fast)', 'gpt-4-turbo'),
                 ('Custom (Specify Settings Below)', 'custom')
             ]
@@ -286,6 +285,15 @@ class UI:
             frame = ttk.Frame(self, padding='10 10 10 10')
             frame.grid(column=0, row=0, sticky=(ttk.W, ttk.E, ttk.N, ttk.S))
             frame.columnconfigure(0, weight=1)
+            frame.rowconfigure(7, weight=1)
+
+            # Settings Button
+            settings_button = ttk.Button(self, text='Settings', bootstyle="info-outline", command=self.open_settings)
+            settings_button.grid(column=0, row=0, sticky=ttk.W, padx=(0, 5))
+
+            # Mobile Control Button
+            mobile_control_button = ttk.Button(self, text='Mobile Control', bootstyle="info-outline", command=self.toggle_web_server)
+            mobile_control_button.grid(column=1, row=0, sticky=ttk.W, padx=(0, 5))
 
             # Entry widget
             self.entry = ttk.Entry(frame, width=70, font=('Helvetica', 14))
@@ -296,18 +304,18 @@ class UI:
 
             # Button Frame
             button_frame = ttk.Frame(frame)
-            button_frame.grid(column=0, row=2, sticky=(ttk.W, ttk.E), columnspan=3, pady=(0,5))
+            button_frame.grid(column=0, row=2, sticky=(ttk.W, ttk.E), columnspan=3, pady=(0, 5))
 
             button_frame.columnconfigure(0, weight=1)
             button_frame.columnconfigure(1, weight=1)
             button_frame.columnconfigure(2, weight=1)
             # Submit Button
             submit_button = ttk.Button(button_frame, text='Submit', bootstyle="success", command=self.execute_user_request)
-            submit_button.grid(column=0, row=0, sticky="ew", padx=(0,5))
+            submit_button.grid(column=0, row=0, sticky="ew", padx=(0, 5))
 
             # Mic Button
             self.mic_button = ttk.Button(button_frame, image=self.mic_icon, bootstyle="link", command=self.start_voice_input_thread)
-            self.mic_button.grid(column=1, row=0, sticky="ew", padx=(0,5))
+            self.mic_button.grid(column=1, row=0, sticky="ew", padx=(0, 5))
             # Stop Button
             stop_button = ttk.Button(button_frame, text='Stop', bootstyle="danger-outline", command=self.stop_previous_request)
             stop_button.grid(column=2, row=0, sticky="ew")
@@ -316,22 +324,37 @@ class UI:
             self.input_display = ttk.Label(frame, text='', font=('Helvetica', 14), wraplength=500, justify="left")
             self.input_display.grid(column=0, row=3, columnspan=3, sticky=ttk.W, pady=(0, 5))
 
-             # View Technical Output Button
-            technical_output_button = ttk.Button(frame, text='View technical output', bootstyle="info",
-                                                command=self.open_technical_output)
-            technical_output_button.grid(column=0, row=4, columnspan=3, sticky=ttk.W, pady=(0,5))
+            # Loading Bar
+            self.progress_bar = ttk.Progressbar(frame, mode="indeterminate", bootstyle="success", length=400)
+            self.progress_bar.grid(column=0, row=4, columnspan=3, sticky=ttk.EW, pady=(0, 5))
+            self.progress_bar.grid_remove()
 
             # Text display for additional messages
             log_label = ttk.Label(frame, text='Log Output', font=('Helvetica', 12), bootstyle="secondary")
             log_label.grid(column=0, row=5, columnspan=3, sticky=ttk.W, pady=(0, 5))
 
-            self.message_display = ttk.ScrolledText(frame, wrap=ttk.WORD, font=('Helvetica', 10), width=70, height=8)
-            self.message_display.grid(column=0, row=6, columnspan=3, sticky=(ttk.W, ttk.E), pady=(0, 5))
+            self.message_display = ttk.ScrolledText(frame, wrap=ttk.WORD, font=('Helvetica', 10), height=4)
+            self.message_display.grid(column=0, row=6, columnspan=3, sticky=(ttk.W, ttk.E, ttk.N, ttk.S), pady=(0, 5))
 
+            # Technical Output Frame
+            self.technical_output_frame = ttk.Frame(frame, padding='5 5 5 5')
+            self.technical_output_frame.grid(column=0, row=7, columnspan=3, sticky=(ttk.W, ttk.E, ttk.N, ttk.S), pady=(0, 5))
+            self.technical_output_frame.columnconfigure(0, weight=1)
+            self.technical_output_frame.rowconfigure(1, weight=1)
 
-            # Settings Button
-            settings_button = ttk.Button(self, text='Settings', bootstyle="info-outline", command=self.open_settings)
-            settings_button.place(relx=1.0, rely=0.0, anchor='ne', x=-5, y=5)
+            # Technical Output Text Box
+            log_label = ttk.Label(self.technical_output_frame, text='Technical Output', font=('Helvetica', 12), bootstyle="secondary")
+            log_label.grid(column=0, row=0, sticky=ttk.W, pady=(0, 5))
+            self.technical_output_display = ttk.ScrolledText(self.technical_output_frame, wrap=ttk.WORD, font=('Helvetica', 10), height=10)
+            self.technical_output_display.grid(column=0, row=1, sticky=(ttk.W, ttk.E, ttk.N, ttk.S))
+
+            # Hide Technical Output Initially
+            self.technical_output_frame.grid_remove()
+
+            # Server Address
+            self.server_address_label = ttk.Label(frame, text=f'http://{self.local_ip}:5000', font=('Helvetica', 8), bootstyle="secondary")
+            self.server_address_label.grid(column=0, row=11, columnspan=3, sticky=ttk.W, pady=(0, 5))
+            self.server_address_label.grid_remove()
 
         def open_technical_output(self):
             UI.TechnicalOutputWindow(self)
@@ -409,11 +432,11 @@ class UI:
             # Update the message display with the provided text.
             # Ensure thread safety when updating the Tkinter GUI.
             if threading.current_thread() is threading.main_thread():
-                self.message_display.insert(ttk.END, message + '\n')
-                self.message_display.see(ttk.END)
+                self.message_display.insert(0.0, message + '\n')
+                self.message_display.see(0.0)
             else:
-                self.message_display.after(0, lambda: self.message_display.insert(ttk.END, message + '\n'))
-                self.message_display.after(0, lambda: self.message_display.see(ttk.END))
+                self.message_display.after(0, lambda: self.message_display.insert(0.0, message + '\n'))
+                self.message_display.after(0, lambda: self.message_display.see(0.0))
     class TechnicalOutputWindow(ttk.Toplevel):
       def __init__(self, parent):
             super().__init__(parent)
@@ -432,7 +455,7 @@ class UI:
             log_label.grid(column=0, row=0, columnspan=3, sticky=ttk.W, pady=(0, 5))
 
             self.message_display = ttk.ScrolledText(frame, wrap=ttk.WORD, font=('Helvetica', 10), width=70, height=15)
-            self.message_display.grid(column=0, row=1, columnspan=3, sticky=(ttk.W, ttk.E), pady=(0, 5))
+            self.message_display.grid(column=0, row=1, columnspan=3, sticky=(ttk.W, ttk.E, ttk.N, ttk.S), pady=(0, 5))
 
             # Redirect logging to text widget
             class TkLoggingHandler(logging.Handler):
