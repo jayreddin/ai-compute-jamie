@@ -49,6 +49,7 @@ class SettingsWindow(ttk.Toplevel):
           self.theme_combobox.set(settings_dict.get('theme', 'superhero'))
           self.screenshot_slider.set(settings_dict.get("number_of_screenshots", 1))
           self.secure_connection.set(1 if settings_dict.get('secure_connection') else 0)
+          self.update_screenshot_label()
 
         def create_widgets(self) -> None:
             # API Key Widgets
@@ -99,13 +100,19 @@ class SettingsWindow(ttk.Toplevel):
             # Add binding for immediate theme change
             self.theme_combobox.bind('<<ComboboxSelected>>', self.on_theme_change)
 
-            #  Slider for number of screenshots
-            self.screenshot_slider = ttk.Scale(self, from_=1, to=10, orient = "horizontal")
-            self.screenshot_slider.pack(pady = 10, fill=ttk.X)
+            # Slider for number of screenshots
+            self.screenshot_slider = ttk.Scale(self, from_=1, to=10, orient="horizontal", command=self.update_screenshot_label)
+            self.screenshot_slider.pack(pady=10, fill=ttk.X)
 
-            label_slider = ttk.Label(self, text='Number of Screenshots', bootstyle="info")
-            label_slider.pack(pady=5)
+            self.screenshot_label = ttk.Label(self, text='Number of Screenshots: 1', bootstyle="info")
+            self.screenshot_label.pack(pady=5)
 
+            # Add numbers to the slider
+            self.screenshot_numbers = ttk.Frame(self)
+            self.screenshot_numbers.pack(fill=ttk.X)
+            for i in range(1, 11):
+                label = ttk.Label(self.screenshot_numbers, text=str(i), bootstyle="info")
+                label.pack(side=ttk.LEFT, expand=True)
 
             # Save Button
             save_button = ttk.Button(self, text='Save Settings', bootstyle="success", command=self.save_button)
@@ -136,6 +143,10 @@ class SettingsWindow(ttk.Toplevel):
             # Apply theme immediately when selected
             theme = self.theme_var.get()
             self.master.change_theme(theme)
+
+        def update_screenshot_label(self, event=None):
+            number_of_screenshots = int(self.screenshot_slider.get())
+            self.screenshot_label.config(text=f'Number of Screenshots: {number_of_screenshots}')
 
         def save_button(self) -> None:
             theme = self.theme_var.get()

@@ -13,7 +13,7 @@ from settings import Settings  # Updated import
 from version import version
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 def open_link(url) -> None:
     webbrowser.open_new(url)
@@ -63,7 +63,6 @@ class AdvancedSettingsWindow(ttk.Toplevel):
         self.models = [
             ('GPT-4o (Default. Medium-Accurate, Medium-Fast)', 'gpt-4o'),
             ('GPT-4o-mini (Cheapest, Fastest)', 'gpt-4o-mini'),
-            ('GPT-4v (Deprecated. Most-Accurate, Slowest)', 'gpt-4-vision-preview'),
             ('GPT-4-Turbo (Least Accurate, Fast)', 'gpt-4-turbo'),
             ('Claude 3 Sonnet (Good Quality, Medium Speed, No Images)', 'claude-3-sonnet'),
             ('Custom (Specify Settings Below)', 'custom')

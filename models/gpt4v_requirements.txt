@@ -1,3 +1,1 @@
-openai>=1.0.0
-pillow>=9.0.0
-python-base64>=1.0.0
+// This file has been removed.

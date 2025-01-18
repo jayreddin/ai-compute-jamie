@@ -27,8 +27,7 @@ class Model(ABC):
             raise
 
     @abstractmethod
-    def get_instructions_for_objective(self, original_user_request: str, step_num: int = 0) -> Dict[str, Any]:
-        """Get instructions from the model for achieving an objective."""
+    def get_instructions_for_objective(self, original_user_request: str, step_num: int = 0) -> dict[str, Any]:
         pass
 
     @abstractmethod

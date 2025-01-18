@@ -5,7 +5,6 @@ import logging
 from models.factory import ModelFactory
 from local_info import *
 from models.gpt4o import GPT4o
-from models.gpt4v import GPT4v
 from screen import Screen
 from settings import Settings
 from multiprocessing import Queue
@@ -140,6 +139,7 @@ class LLM:
              logging.error(f'An error occurred while reading context file: {e}')
              raise
         context += (
+            
         "You are an agent that can control a computer by executing commands based on user requests. "
 
         "You will receive a user request, and may have access to a screenshot. "
@@ -189,7 +189,7 @@ class LLM:
             if self.model_name == "mistral-large":
                  return self.model.get_instructions_for_objective(original_user_request, step_num)
             else:
-                if 'number_of_screenshots' in self.settings_dict and int(self.settings_dict['number_of_screenshots']) > 0 and isinstance(self.model, (GPT4v, GPT4o)):
+                if 'number_of_screenshots' in self.settings_dict and int(self.settings_dict['number_of_screenshots']) > 0 and isinstance(self.model, GPT4o):
                     return self.model.get_instructions_for_objective(original_user_request, step_num)
                 else:
                     return self.model.get_instructions_for_objective(original_user_request, step_num)
