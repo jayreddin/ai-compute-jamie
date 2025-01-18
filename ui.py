@@ -254,21 +254,22 @@ class UI:
             # PhotoImage object needs to persist as long as the app does, hence it's a class object.
             path_to_icon_png = Path(__file__).resolve().parent.joinpath('resources', 'icon.png')
             path_to_microphone_png = Path(__file__).resolve().parent.joinpath('resources', 'microphone.png')
-            self.logo_img = ImageTk.PhotoImage(Image.open(path_to_icon_png).resize((50, 50)))
-            mic_image = Image.open(path_to_microphone_png).resize((24, 24)).convert("RGBA") # need to create a red tinted image from microphone.png
-            self.mic_icon = ImageTk.PhotoImage(mic_image)
+            with Image.open(path_to_icon_png) as img:
+                self.logo_img = ImageTk.PhotoImage(img.resize((50, 50)))
+            with Image.open(path_to_microphone_png) as mic_image:
+                mic_image = mic_image.resize((24, 24)).convert("RGBA")
+                self.mic_icon = ImageTk.PhotoImage(mic_image)
 
-            for x in range(mic_image.width):
-                for y in range(mic_image.height):
-                    r, g, b, a = mic_image.getpixel((x, y))
-                    mic_image.putpixel((x, y), (255, 0, 0, a))
+                for x in range(mic_image.width):
+                    for y in range(mic_image.height):
+                        r, g, b, a = mic_image.getpixel((x, y))
+                        mic_image.putpixel((x, y), (255, 0, 0, a))
 
-            self.mic_icon_red = ImageTk.PhotoImage(mic_image)
-
-
+                self.mic_icon_red = ImageTk.PhotoImage(mic_image)
 
             # This adds app icon in linux which pyinstaller can't
             self.tk.call('wm', 'iconphoto', self._w, self.logo_img)
+
 
             # MP Queue to facilitate communication between UI and Core.
             # Put user requests received from UI text box into this queue which will then be dequeued in App to be sent

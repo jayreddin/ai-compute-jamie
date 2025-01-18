@@ -1,174 +1,213 @@
 import json
-import logging
 import time
-from queue import Queue
-from typing import Any, Dict, List
-from openai.types import Message
-from openai import OpenAIError
+from typing import Any
+import logging
+from pathlib import Path
+from multiprocessing import Queue
 
 from models.model import Model
+from openai import OpenAIError # type: ignore
+from openai.types.beta.threads.message import Message # type: ignore
 from screen import Screen
+import tkinter as tk
+
+
+# TODO
+# [ ] Function calling with assistants api - https://platform.openai.com/docs/assistants/tools/function-calling/quickstart
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class GPT4o(Model):
-    MAX_RETRIES = 3
-    RATE_LIMIT_DELAY = 20  # seconds
-    POLL_INTERVAL = 1  # seconds
-
     def __init__(self, model_name, base_url, api_key, context, status_queue: Queue):
         super().__init__(model_name, base_url, api_key, context, status_queue)
-        self.assistant = None
-        self.thread = None
-        self.list_of_image_ids = []
-        self._initialize_assistant_and_thread()
 
-    def _initialize_assistant_and_thread(self):
         try:
-            logging.info(f"Creating assistant with model {self.model_name}")
+            # GPT4o has Assistant Mode enabled that we can utilize to make Open Interface be more contextually aware
+            logging.info(f"Creating assistant with model {model_name}")
             self.assistant = self.client.beta.assistants.create(
                 name='Open Interface Backend',
                 instructions=self.context,
-                model=self.model_name,
+                model=model_name,
             )
             logging.info(f'Assistant created successfully, id: {self.assistant.id}')
+        except openai.error.APIError as e: # import openai
+            logging.error(f'API Error creating assistant: {e}')
+            raise
+        except openai.error.AuthenticationError as e: # import openai
+            logging.error(f'Authentication Error creating assistant: {e}')
+            raise
+        except OpenAIError as e:
+            logging.error(f'Other OpenAI Error creating assistant: {e}')
+            raise
 
+        try:
             logging.info("Creating a new thread")
+
             self.thread = self.client.beta.threads.create()
             logging.info(f"Thread created successfully, id: {self.thread.id}")
         except OpenAIError as e:
-            logging.error(f"Error initializing assistant/thread: {e}")
+            logging.error(f"Error creating thread: {e}")
             raise
 
-    def send_message_to_llm(self, formatted_user_request, retries=0) -> Message:
-        if not self.thread or not self.assistant:
-            logging.error("Thread or Assistant not initialized")
-            self._initialize_assistant_and_thread()
-
-        try:
-            # Send message to thread
-            message = self.client.beta.threads.messages.create(
-                thread_id=self.thread.id,
-                role='user',
-                content=formatted_user_request
-            )
-
-            # Create and monitor run
-            run = self.client.beta.threads.runs.create(
-                thread_id=self.thread.id,
-                assistant_id=self.assistant.id,
-                instructions=''
-            )
-
-            # Monitor run status with proper error handling
-            while True:
-                try:
-                    run = self.client.beta.threads.runs.retrieve(
-                        thread_id=self.thread.id,
-                        run_id=run.id
-                    )
-
-                    if run.status == 'completed':
-                        response = self.client.beta.threads.messages.list(
-                            thread_id=self.thread.id
-                        )
-                        return response.data[0]
-                    elif run.status in ['failed', 'cancelled', 'expired']:
-                        error_msg = f"Run failed with status {run.status}: {getattr(run, 'last_error', 'Unknown error')}"
-                        logging.error(error_msg)
-                        raise Exception(error_msg)
-                    elif run.status == 'requires_action':
-                        logging.warning(f"Run requires action: {run.required_action}")
-                        # Handle required actions if needed
-                        raise Exception("Run requires manual action")
-                    
-                    time.sleep(self.POLL_INTERVAL)
-
-                except OpenAIError as e:
-                    if "Rate limit" in str(e) and retries < self.MAX_RETRIES:
-                        logging.warning(f"Rate limit reached, retrying in {self.RATE_LIMIT_DELAY}s...")
-                        time.sleep(self.RATE_LIMIT_DELAY)
-                        return self.send_message_to_llm(formatted_user_request, retries + 1)
-                    raise
-
-        except OpenAIError as e:
-            logging.error(f"OpenAI Error in send_message_to_llm: {e}")
-            if retries < self.MAX_RETRIES:
-                logging.info(f"Retrying... ({retries + 1}/{self.MAX_RETRIES})")
-                time.sleep(self.RATE_LIMIT_DELAY)
-                return self.send_message_to_llm(formatted_user_request, retries + 1)
-            raise
-
-    def upload_screenshot_and_get_file_id(self, photo_image_filepath: str) -> str:
-        """Upload screenshot to OpenAI and get file ID."""
-        try:
-            with open(photo_image_filepath, "rb") as image_file:
-                uploaded_file = self.client.files.create(
-                    file=image_file,
-                    purpose="assistants"
-                )
-                return uploaded_file.id
-        except OpenAIError as e:
-            logging.error(f"Error uploading screenshot: {e}")
-            raise
-
-    def format_user_request_for_llm(self, original_user_request: str, step_num: int = 0, file_id: str = None) -> str:
-        """Format user request for Assistant API."""
-        formatted_text = f"Step {step_num}: {original_user_request}"
-        if file_id:
-            formatted_text += f"\nScreenshot file_id: {file_id}"
-        return formatted_text
-
-    def convert_llm_response_to_json_instructions(self, llm_response: Message) -> Dict[str, Any]:
-        """Convert Assistant API response to standardized JSON instructions."""
-        try:
-            # Assistant response should be in the content of the message
-            content = llm_response.content[0].text.value if hasattr(llm_response.content[0], 'text') else llm_response.content[0]
-            return json.loads(content)
-        except (json.JSONDecodeError, AttributeError, IndexError) as e:
-            logging.error(f"Error parsing model response: {str(e)}")
-            raise Exception(f"Failed to parse model response: {str(e)}")
+        # IDs of images uploaded to OpenAI for use with the assistants API, can be cleaned up once thread is no longer needed
+        self.list_of_image_ids = []
 
     def get_instructions_for_objective(self, original_user_request: str, step_num: int = 0) -> dict[str, Any]:
         logging.info("Getting a screenshot to send to the AI model")
-        photo_image_filepath = Screen().get_screenshot_file()
+        # Upload screenshot to OpenAI - Note: Don't delete files from openai while the thread is active
+        try:
+            photo_image_filepath = Screen().get_screenshot_file()
+        except Exception as e:
+            logging.error(f"Error capturing screenshot: {e}")
+            raise
+
+        try:
+            openai_screenshot_file_id = self.upload_screenshot_and_get_file_id(photo_image_filepath)
+        except Exception as e:
+            logging.error(f"Error uploading screenshot: {e}")
+            raise
+
+        logging.info("Screenshot obtained, file_id: " + str(openai_screenshot_file_id))
+        
         self.status_queue.put(("I took a screenshot and sent it to the AI model", photo_image_filepath))
-        
-        # Upload screenshot and get file ID
-        file_id = self.upload_screenshot_and_get_file_id(photo_image_filepath)
-        self.list_of_image_ids.append(file_id)
-        
-        message = self.format_user_request_for_llm(original_user_request, step_num, file_id)
-        llm_response = self.send_message_to_llm(message)
-        json_instructions = self.convert_llm_response_to_json_instructions(llm_response)
+
+
+        self.list_of_image_ids.append(openai_screenshot_file_id)
+
+        # Format user request to send to LLM
+        formatted_user_request = self.format_user_request_for_llm(original_user_request, step_num,
+                                                                  openai_screenshot_file_id)
+
+        # Read response
+        llm_response = self.send_message_to_llm(formatted_user_request)
+        json_instructions: dict[str, Any] = self.convert_llm_response_to_json_instructions(llm_response)
+
         return json_instructions
 
-    def cleanup(self):
-        logging.info(f"Cleaning up model {self.model_name}")
+    def send_message_to_llm(self, formatted_user_request) -> Message:
+         try:
+           message = self.client.beta.threads.messages.create(
+               thread_id=self.thread.id,
+               role='user',
+               content=formatted_user_request
+           )
+           logging.info("Sending message to the ai model...")
+           run = self.client.beta.threads.runs.create(
+               thread_id=self.thread.id,
+               assistant_id=self.assistant.id,
+               instructions=''
+           )
+           run = self.client.beta.threads.runs.retrieve(thread_id = self.thread.id, run_id = run.id)
+
+           wait_time = 1
+           max_wait_time = 60
+           while run.status != 'completed':
+               logging.info(f'Waiting for response, sleeping for {wait_time}. run.status={run.status}')
+               time.sleep(wait_time)
+               wait_time = min(wait_time * 2, max_wait_time)  # Exponential backoff with a maximum wait time
+
+               run = self.client.beta.threads.runs.retrieve(thread_id = self.thread.id, run_id = run.id) #check the status.
+
+
+               if run.status == 'failed':
+                  error_message = f'Failed run. Required action: {run.required_action}. Last error: {run.last_error}'
+                  logging.error(error_message)
+                  raise Exception(error_message)
+
+
+           if run.status == 'completed':
+               response = self.client.beta.threads.messages.list(thread_id=self.thread.id)
+               logging.info("Response received from ai model")
+               return response.data[0]
+           else:
+              error_message = 'Run did not complete successfully.'
+              logging.error(error_message)
+              raise Exception(error_message)
+         except OpenAIError as e:
+             logging.error(f"OpenAI Error in send_message_to_llm {e}")
+             raise
+
+
+    def upload_screenshot_and_get_file_id(self,filepath) -> str:
+        # Files are used to upload documents like images that can be used with features like Assistants
+        # Assistants API cannot take base64 images like chat.completions API
+        logging.info("Uploading screenshot to AI model...")
         try:
-            # Clean up thread
-            if hasattr(self, 'thread') and self.thread:
-                try:
-                    self.client.beta.threads.delete(self.thread.id)
-                    logging.info(f"Thread {self.thread.id} deleted")
-                except OpenAIError as e:
-                    logging.warning(f"Failed to delete thread: {e}")
-
-            # Clean up assistant
-            if hasattr(self, 'assistant') and self.assistant:
-                try:
-                    self.client.beta.assistants.delete(self.assistant.id)
-                    logging.info(f"Assistant {self.assistant.id} deleted")
-                except OpenAIError as e:
-                    logging.warning(f"Failed to delete assistant: {e}")
-
-            # Clean up uploaded images
-            for image_id in self.list_of_image_ids:
-                try:
-                    self.client.files.delete(image_id)
-                    logging.info(f"Deleted image file {image_id}")
-                except OpenAIError as e:
-                    logging.warning(f"Failed to delete image {image_id}: {e}")
-            
-            self.list_of_image_ids.clear()
-        except Exception as e:
-            logging.error(f"Error during cleanup: {e}")
+            with open(filepath, 'rb') as file:
+                response = self.client.files.create(
+                    file=file,
+                    purpose='vision'
+                )
+            return response.id
+        except FileNotFoundError as e:
+            logging.error(f"File not found error: {e}")
             raise
+        except OpenAIError as e:
+            logging.error(f"OpenAI Error {e}")
+            raise
+        except Exception as e:
+            logging.error(f"Unknown error: {e}")
+            logging.exception("Detailed traceback:")
+            raise
+
+    def format_user_request_for_llm(self, original_user_request, step_num, openai_screenshot_file_id) -> list[
+
+        dict[str, Any]]:
+        request_data: str = json.dumps({
+            'original_user_request': original_user_request,
+            'step_num': step_num
+        })
+
+        content = [
+            {
+                'type': 'text',
+                'text': request_data
+            },
+            {
+                'type': 'image_file',
+                'image_file': {
+                    'file_id': openai_screenshot_file_id
+                }
+            }
+        ]
+
+        return content
+
+    def convert_llm_response_to_json_instructions(self, llm_response: Message) -> dict[str, Any]:
+        try:
+            llm_response_data: str = llm_response.content[0].text.value.strip()
+
+            # Our current LLM model does not guarantee a JSON response hence we use regex to extract JSON
+            import re # import re
+            json_match = re.search(r'\{.*\}', llm_response_data, re.DOTALL)
+            if json_match:
+                json_response = json.loads(json_match.group())
+                return json_response
+            else:
+                raise ValueError("No JSON object found in the response")
+
+        except json.JSONDecodeError as e:
+            logging.error(f"JSONDecodeError: {e}, response received: {llm_response.content[0].text.value}")
+            return {"error": "JSONDecodeError", "message": str(e), "raw_data": llm_response.content[0].text.value}
+
+        except Exception as e:
+            logging.error(f'Error while parsing JSON response - {e}')
+            return {}
+
+
+    def cleanup(self):
+        # Note: Cannot delete screenshots while the thread is active. Cleanup during shut down.
+        logging.info(f"Cleaning up model {self.model_name}")
+        for id in self.list_of_image_ids:
+            try:
+                logging.info(f"Deleting file with id: {id}")
+                self.client.files.delete(id)
+            except OpenAIError as e:
+                logging.error(f"Error deleting file {id}: {e}")
+
+        try:
+            logging.info(f"Deleting thread with id: {self.thread.id}")
+            self.client.beta.threads.delete(self.thread.id)
+        except OpenAIError as e:
+            logging.error(f"Error deleting thread {self.thread.id}: {e}")

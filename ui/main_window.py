@@ -56,18 +56,21 @@ class MainWindow(ttk.Window):
             try:
                path_to_icon_png = Path(__file__).resolve().parent.joinpath('resources', 'icon.png')
                path_to_microphone_png = Path(__file__).resolve().parent.joinpath('resources', 'microphone.png')
-               self.logo_img = ImageTk.PhotoImage(Image.open(path_to_icon_png).resize((50, 50)))
-               mic_image = Image.open(path_to_microphone_png).resize((24, 24)).convert("RGBA")  # need to create a red tinted image from microphone.png
-               self.mic_icon = ImageTk.PhotoImage(mic_image)
+               with Image.open(path_to_icon_png) as img:
+                   self.logo_img = ImageTk.PhotoImage(img.resize((50, 50)))
+               with Image.open(path_to_microphone_png) as mic_image:
+                   mic_image = mic_image.resize((24, 24)).convert("RGBA")
+                   self.mic_icon = ImageTk.PhotoImage(mic_image)
 
-               for x in range(mic_image.width):
-                  for y in range(mic_image.height):
-                    r, g, b, a = mic_image.getpixel((x, y))
-                    mic_image.putpixel((x, y), (255, 0, 0, a))
+                   for x in range(mic_image.width):
+                      for y in range(mic_image.height):
+                        r, g, b, a = mic_image.getpixel((x, y))
+                        mic_image.putpixel((x, y), (255, 0, 0, a))
 
-               self.mic_icon_red = ImageTk.PhotoImage(mic_image)
+                   self.mic_icon_red = ImageTk.PhotoImage(mic_image)
             except Exception as e:
               logging.error(f'Error loading images: {e}')
+
 
 
             # This adds app icon in linux which pyinstaller can't
@@ -315,10 +318,11 @@ class MainWindow(ttk.Window):
                     self.message_display.insert(0.0, message + '\n')
                  elif isinstance(message, tuple) and len(message) == 2 and isinstance(message[0], str) and isinstance(message[1], str):
                      try:
-                         img = ImageTk.PhotoImage(Image.open(message[1]))
-                         self.message_display.insert(0.0, message[0] + '\n')
-                         self.message_display.image_create(0.0, image = img)
-                         self.message_display.insert(0.0, '\n')
+                         with Image.open(message[1]) as img_file:
+                             img = ImageTk.PhotoImage(img_file)
+                             self.message_display.insert(0.0, message[0] + '\n')
+                             self.message_display.image_create(0.0, image=img)
+                             self.message_display.insert(0.0, '\n')
                      except Exception as e:
                          logging.error(f"Error loading image from path {message[1]}: {e}")
                          self.message_display.insert(0.0, f"Error loading image from path {message[1]}: {e}" + '\n')
@@ -329,24 +333,25 @@ class MainWindow(ttk.Window):
                     self.progress_bar.stop()
                     self.progress_bar.grid_remove()
 
-
-
             else:
                 if isinstance(message, str):
                   self.message_display.after(0, lambda: self.message_display.insert(0.0, message + '\n'))
                 elif isinstance(message, tuple) and len(message) == 2 and isinstance(message[0], str) and isinstance(message[1], str):
                      try:
-                        img = ImageTk.PhotoImage(Image.open(message[1]))
-                        self.message_display.after(0, lambda: self.message_display.insert(0.0, message[0] + '\n'))
-                        self.message_display.after(0, lambda: self.message_display.image_create(0.0, image = img))
-                        self.message_display.after(0, lambda: self.message_display.insert(0.0, '\n'))
+                        with Image.open(message[1]) as img_file:
+                            img = ImageTk.PhotoImage(img_file)
+                            self.message_display.after(0, lambda: self.message_display.insert(0.0, message[0] + '\n'))
+                            self.message_display.after(0, lambda: self.message_display.image_create(0.0, image=img))
+                            self.message_display.after(0, lambda: self.message_display.insert(0.0, '\n'))
                      except Exception as e:
                         logging.error(f"Error loading image from path {message[1]}: {e}")
                         self.message_display.after(0, lambda: self.message_display.insert(0.0, f"Error loading image from path {message[1]}: {e}" + '\n'))
                 self.message_display.after(0, lambda: self.message_display.see(0.0))
                 if self.progress_bar.winfo_ismapped():
+
                    self.message_display.after(0, lambda: self.progress_bar.stop())
                    self.message_display.after(0, lambda: self.progress_bar.grid_remove())
+
 
         # Redirect logging to text widget
         class TkLoggingHandler(logging.Handler):

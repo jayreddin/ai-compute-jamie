@@ -32,10 +32,12 @@ def index():
     if request.method == 'POST':
         user_input = request.form.get('user_input')
         if user_input:
-           logging.info(f"Received User Input via webserver: {user_input}")
+           logging.info(f"Received User Input via webserver: {urllib.parse.quote(user_input)}")
+           #import urllib
            app.user_and_ai_responses.append(("user", user_input))
            app.user_request_queue.put(user_input)
         return render_template('index.html', settings=settings_dict, messages = app.user_and_ai_responses, api_key= app.API_KEY)
+
     else:
         return render_template('index.html', settings=settings_dict, messages = app.user_and_ai_responses, api_key= app.API_KEY)
 
@@ -66,10 +68,12 @@ def web_settings():
 
         settings.save_settings_to_file(settings_dict)
         settings.notify_settings_changed()
-        logging.info(f"Settings updated from web browser: {settings_dict}")
+        logging.info(f"Settings updated from web browser: {urllib.parse.quote(str(settings_dict))}")
+        #import urllib
 
         return jsonify(success=True, message="Settings saved successfully", settings=settings.get_dict())
     else:
+
          return render_template('settings.html', settings = settings.get_dict())
 
 @app.route('/get-messages', methods = ['GET'])
@@ -83,11 +87,15 @@ def get_local_ip_address():
         """Get the local IP address for the web server"""
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(20)
             s.connect(("8.8.8.8", 80))
             local_ip = s.getsockname()[0]
+            s.shutdown(socket.SHUT_RDWR)
+
             s.close()
             return local_ip
         except Exception as e:
+
             logging.error(f"Error getting local IP address: {e}")
             return "127.0.0.1"
 
