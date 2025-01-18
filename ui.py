@@ -469,3 +469,89 @@ class UI:
                     self.text_widget.see(ttk.END)  # Scroll to end
             handler = TkLoggingHandler(self.message_display)
             logging.getLogger().addHandler(handler)
+
+def create_widgets(self) -> None:
+    # Frame
+    frame = ttk.Frame(self, padding='10 10 10 10')
+    frame.grid(column=0, row=0, sticky=(ttk.W, ttk.E, ttk.N, ttk.S))
+    frame.columnconfigure(0, weight=1)
+    frame.rowconfigure(7, weight=1)  # Make technical output expandable
+
+    # Top Controls Frame
+    top_controls = ttk.Frame(frame)
+    top_controls.grid(column=0, row=0, columnspan=3, sticky=(ttk.W, ttk.E), pady=(0, 10))
+    top_controls.columnconfigure(1, weight=1)  # Space between buttons
+
+    # Settings Button
+    settings_button = ttk.Button(top_controls, text='Settings', bootstyle="info-outline", 
+                                command=self.open_settings)
+    settings_button.grid(column=0, row=0, padx=(0, 5))
+
+    # Mobile Control Button
+    mobile_control_button = ttk.Button(top_controls, text='Mobile Control', 
+                                     bootstyle="info-outline", 
+                                     command=self.toggle_web_server)
+    mobile_control_button.grid(column=1, row=0, padx=(0, 5))
+
+    # Entry widget
+    self.entry = ttk.Entry(frame, width=70, font=('Helvetica', 14))
+    self.entry.grid(column=0, row=1, sticky=(ttk.W, ttk.E), columnspan=3, pady=(0, 5))
+    self.entry.insert(0, "Input Command")
+    self.entry.bind("<FocusIn>", self.on_focus_in)
+    self.entry.bind("<FocusOut>", self.on_focus_out)
+
+    # ... existing button frame code ...
+
+    # Text display for echoed input and ai response
+    self.input_display = ttk.Label(frame, text='', font=('Helvetica', 14), 
+                                 wraplength=500, justify="left")
+    self.input_display.grid(column=0, row=3, columnspan=3, sticky=ttk.W, pady=(0, 5))
+
+    # Progress Bar
+    self.progress_bar = ttk.Progressbar(frame, mode="indeterminate", 
+                                      bootstyle="success", length=400)
+    self.progress_bar.grid(column=0, row=4, columnspan=3, sticky=ttk.EW, pady=(0, 5))
+    self.progress_bar.grid_remove()
+
+    # Log Output Section (Smaller)
+    log_label = ttk.Label(frame, text='Log Output', font=('Helvetica', 12), 
+                         bootstyle="secondary")
+    log_label.grid(column=0, row=5, columnspan=3, sticky=ttk.W, pady=(0, 5))
+
+    self.message_display = ttk.ScrolledText(frame, wrap=ttk.WORD, font=('Helvetica', 10), 
+                                          height=3)  # Reduced height
+    self.message_display.grid(column=0, row=6, columnspan=3, 
+                            sticky=(ttk.W, ttk.E), pady=(0, 5))
+
+    # Technical Output Section (Larger)
+    tech_label = ttk.Label(frame, text='Technical Output', font=('Helvetica', 12), 
+                          bootstyle="secondary")
+    tech_label.grid(column=0, row=7, columnspan=3, sticky=ttk.W, pady=(0, 5))
+
+    self.technical_output_display = ttk.ScrolledText(frame, wrap=ttk.WORD, 
+                                                   font=('Helvetica', 10))
+    self.technical_output_display.grid(column=0, row=8, columnspan=3, 
+                                     sticky=(ttk.W, ttk.E, ttk.N, ttk.S))
+
+    # Configure frame to expand properly
+    frame.grid(sticky=(ttk.W, ttk.E, ttk.N, ttk.S))
+    self.grid_rowconfigure(0, weight=1)
+    self.grid_columnconfigure(0, weight=1)
+
+def update_message(self, message: str) -> None:
+    # Update the message display with the provided text at the top
+    if threading.current_thread() is threading.main_thread():
+        self.message_display.insert('1.0', message + '\n')
+        self.message_display.see('1.0')
+    else:
+        self.message_display.after(0, lambda: self.message_display.insert('1.0', message + '\n'))
+        self.message_display.after(0, lambda: self.message_display.see('1.0'))
+
+def update_technical_output(self, message: str) -> None:
+    # Update the technical output with the provided text at the top
+    if threading.current_thread() is threading.main_thread():
+        self.technical_output_display.insert('1.0', message + '\n')
+        self.technical_output_display.see('1.0')
+    else:
+        self.technical_output_display.after(0, lambda: self.technical_output_display.insert('1.0', message + '\n'))
+        self.technical_output_display.after(0, lambda: self.technical_output_display.see('1.0'))
