@@ -66,7 +66,6 @@ class AdvancedSettingsWindow(ttk.Toplevel):
             ('GPT-4v (Deprecated. Most-Accurate, Slowest)', 'gpt-4-vision-preview'),
             ('GPT-4-Turbo (Least Accurate, Fast)', 'gpt-4-turbo'),
             ('Claude 3 Sonnet (Good Quality, Medium Speed, No Images)', 'claude-3-sonnet'),
-             ('Mistral Large (Text and Code, No Images)', 'mistral-large'),
             ('Custom (Specify Settings Below)', 'custom')
         ]
         for text, value in self.models:
