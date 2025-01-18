@@ -4,9 +4,9 @@ from multiprocessing import Queue
 from pathlib import Path
 import logging
 
-import speech_recognition as sr
-import ttkbootstrap as ttk
-from PIL import Image, ImageTk
+import speech_recognition as sr # type: ignore
+import ttkbootstrap as ttk # type: ignore
+from PIL import Image, ImageTk # type: ignore
 
 from llm import DEFAULT_MODEL_NAME
 from settings import Settings  # Updated import
